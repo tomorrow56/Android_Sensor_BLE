@@ -4,12 +4,12 @@ plugins {
 }
 
 android {
-    namespace 'com.example.sensorusbserial'
+    namespace 'com.example.sensorbluetoothserial'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.sensorusbserial"
-        minSdk 24
+        applicationId "com.example.sensorbluetoothserial"
+        minSdk 26 // Android 8.0 (Oreo)以降を推奨 (BLEのバックグラウンドスキャン要件のため)
         targetSdk 34
         versionCode 1
         versionName "1.0"

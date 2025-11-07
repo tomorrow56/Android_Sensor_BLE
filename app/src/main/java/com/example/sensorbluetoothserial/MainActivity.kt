@@ -1,10 +1,12 @@
-package com.example.sensorusbserial
+package com.example.sensorbluetoothserial
 
 import android.Manifest
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.content.ServiceConnection
+import android.content.Intent
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -31,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var lightText: TextView
     private lateinit var gpsText: TextView
     
-    private var usbSerialService: UsbSerialService? = null
+    private var blePeripheralService: BlePeripheralService? = null
     private var serviceBound = false
     
     private val handler = Handler(Looper.getMainLooper())
@@ -39,14 +41,14 @@ class MainActivity : AppCompatActivity() {
     
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as UsbSerialService.LocalBinder
-            usbSerialService = binder.getService()
+            val binder = service as BlePeripheralService.LocalBinder
+            blePeripheralService = binder.getService()
             serviceBound = true
             updateUI()
         }
         
         override fun onServiceDisconnected(name: ComponentName?) {
-            usbSerialService = null
+            blePeripheralService = null
             serviceBound = false
         }
     }
@@ -72,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         // サービスにバインド
-        val intent = Intent(this, UsbSerialService::class.java)
+        val intent = Intent(this, BlePeripheralService::class.java)
         bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
     
@@ -125,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         // サービスを開始
-        val intent = Intent(this, UsbSerialService::class.java)
+        val intent = Intent(this, BlePeripheralService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
@@ -133,7 +135,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         // データ収集を開始
-        usbSerialService?.startDataCollection(samplingIntervalMs)
+        blePeripheralService?.startDataCollection(samplingIntervalMs)
         
         // UI更新を開始
         startUIUpdate()
@@ -143,10 +145,10 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun stopDataCollection() {
-        usbSerialService?.stopDataCollection()
+        blePeripheralService?.stopDataCollection()
         
         // サービスを停止
-        val intent = Intent(this, UsbSerialService::class.java)
+        val intent = Intent(this, BlePeripheralService::class.java)
         stopService(intent)
         
         // UI更新を停止
@@ -180,7 +182,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateSensorDisplay() {
-        val data = usbSerialService?.getCurrentSensorData() ?: return
+        val data = blePeripheralService?.getCurrentSensorData() ?: return
         
         // 加速度センサー
         data.accelerometer?.let { accel ->
@@ -213,7 +215,7 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun updateUI() {
-        val isCollecting = usbSerialService?.isCollecting() ?: false
+        val isCollecting = blePeripheralService?.isCollecting() ?: false
         
         startButton.isEnabled = !isCollecting
         stopButton.isEnabled = isCollecting
@@ -227,16 +229,42 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun checkPermissions(): Boolean {
+        
+        // Bluetoothが有効か確認
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val bluetoothAdapter = bluetoothManager.adapter
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            Toast.makeText(this, "Bluetoothを有効にしてください", Toast.LENGTH_LONG).show()
+            // ユーザーにBluetoothを有効にするよう促すインテントを返すことも可能だが、今回はトーストのみ
+            return false
+        }
         val permissionsToRequest = mutableListOf<String>()
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+            }
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+        }
         
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED) {
             permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
         }
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            }
         }
         
         if (permissionsToRequest.isNotEmpty()) {

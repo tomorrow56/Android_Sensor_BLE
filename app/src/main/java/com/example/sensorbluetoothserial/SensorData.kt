@@ -1,4 +1,4 @@
-package com.example.sensorusbserial
+package com.example.sensorbluetoothserial
 
 data class SensorData(
     val timestamp: Long,

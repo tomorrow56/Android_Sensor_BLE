@@ -1,4 +1,4 @@
-package com.example.sensorusbserial
+package com.example.sensorbluetoothserial
 
 import android.content.Context
 import android.hardware.Sensor
