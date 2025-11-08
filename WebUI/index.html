@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Sensor Data Receiver</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .data-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .connection-status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.disconnected {
+            background: #fee;
+            color: #c33;
+            border: 2px solid #fcc;
+        }
+
+        .connection-status.connected {
+            background: #efe;
+            color: #3c3;
+            border: 2px solid #cfc;
+        }
+
+        .connection-status.connecting {
+            background: #ffe;
+            color: #c93;
+            border: 2px solid #ffc;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #218838;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .sensor-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .sensor-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .sensor-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .sensor-value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .stats {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .stats h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .stat-value {
+            color: #495057;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 4px 8px;
+            border-radius: 3px;
+        }
+
+        .log-entry.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .log-entry.success {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+
+        .log-entry.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .log-entry.data {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .sensor-data {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔵 Android Sensor Data Receiver</h1>
+            <p class="subtitle">Web Bluetoothでセンサーデータを受信</p>
+        </header>
+
+        <div class="main-content">
+            <section class="control-panel">
+                <h2>⚙️ 制御パネル</h2>
+                
+                <div id="connectionStatus" class="connection-status disconnected">
+                    📡 未接続
+                </div>
+
+                <button id="connectBtn" class="btn-primary">
+                    🔗 Bluetoothデバイスに接続
+                </button>
+                
+                <button id="disconnectBtn" class="btn-secondary" disabled>
+                    ✖️ 接続を解除
+                </button>
+                
+                <button id="startBtn" class="btn-success" disabled>
+                    ▶️ データ受信開始
+                </button>
+                
+                <button id="stopBtn" class="btn-secondary" disabled>
+                    ⏸️ データ受信停止
+                </button>
+                
+                <button id="exportBtn" class="btn-primary" disabled>
+                    💾 CSVでエクスポート
+                </button>
+                
+                <button id="clearBtn" class="btn-secondary">
+                    🗑️ データをクリア
+                </button>
+
+                <div class="stats">
+                    <h3>📊 統計情報</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">受信データ数:</span>
+                        <span id="dataCount" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">接続時間:</span>
+                        <span id="connectionTime" class="stat-value">--:--:--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">最終更新:</span>
+                        <span id="lastUpdate" class="stat-value">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="data-panel">
+                <h2>📈 センサーデータ</h2>
+                
+                <div class="sensor-data">
+                    <div class="sensor-card">
+                        <h3>📱 加速度センサー</h3>
+                        <div class="sensor-value">X: <span id="accelX">--</span> m/s²</div>
+                        <div class="sensor-value">Y: <span id="accelY">--</span> m/s²</div>
+                        <div class="sensor-value">Z: <span id="accelZ">--</span> m/s²</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <h3>🔄 ジャイロスコープ</h3>
+                        <div class="sensor-value">X: <span id="gyroX">--</span> rad/s</div>
+                        <div class="sensor-value">Y: <span id="gyroY">--</span> rad/s</div>
+                        <div class="sensor-value">Z: <span id="gyroZ">--</span> rad/s</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <h3>💡 光センサー</h3>
+                        <div class="sensor-value">照度: <span id="light">--</span> lux</div>
+                    </div>
+                    
+                    <div class="sensor-card">
+                        <h3>📍 GPS</h3>
+                        <div class="sensor-value">緯度: <span id="gpsLat">--</span></div>
+                        <div class="sensor-value">経度: <span id="gpsLng">--</span></div>
+                        <div class="sensor-value">高度: <span id="gpsAlt">--</span> m</div>
+                        <div class="sensor-value">精度: <span id="gpsAcc">--</span> m</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="log-container">
+            <h2>📝 ログ</h2>
+            <div id="log" class="log"></div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
