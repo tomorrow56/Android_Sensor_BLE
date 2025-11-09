@@ -13,6 +13,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
@@ -38,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     
     private val handler = Handler(Looper.getMainLooper())
     private var updateRunnable: Runnable? = null
+    
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var keepScreenOnEnabled = false
     
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
@@ -69,6 +75,13 @@ class MainActivity : AppCompatActivity() {
         setupSamplingRateSpinner()
         setupButtons()
         checkPermissions()
+        
+        // WakeLockの準備
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_DIM_WAKE_LOCK,
+            "SensorBLE::DataCollectionWakeLock"
+        )
     }
     
     override fun onStart() {
@@ -137,6 +150,9 @@ class MainActivity : AppCompatActivity() {
         // データ収集を開始
         blePeripheralService?.startDataCollection(samplingIntervalMs)
         
+        // スリープを無効化
+        acquireWakeLock()
+        
         // UI更新を開始
         startUIUpdate()
         
@@ -153,6 +169,9 @@ class MainActivity : AppCompatActivity() {
         
         // UI更新を停止
         stopUIUpdate()
+        
+        // スリープを元に戻す
+        releaseWakeLock()
         
         updateUI()
         Toast.makeText(this, "データ収集を停止しました", Toast.LENGTH_SHORT).show()
@@ -300,6 +319,57 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    private fun acquireWakeLock() {
+        wakeLock?.let {
+            if (!it.isHeld) {
+                it.acquire()
+                statusText.text = "データ収集中 (スリープ無効)"
+            }
+        }
+    }
+    
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+            }
+        }
+    }
+    
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        menu?.findItem(R.id.menu_keep_screen_on)?.isChecked = keepScreenOnEnabled
+        return true
+    }
+    
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        val isCollecting = blePeripheralService?.isCollecting() ?: false
+        menu?.findItem(R.id.menu_keep_screen_on)?.isEnabled = !isCollecting
+        return super.onPrepareOptionsMenu(menu)
+    }
+    
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_keep_screen_on -> {
+                val isCollecting = blePeripheralService?.isCollecting() ?: false
+                if (!isCollecting) {
+                    keepScreenOnEnabled = !keepScreenOnEnabled
+                    item.isChecked = keepScreenOnEnabled
+                    
+                    if (keepScreenOnEnabled) {
+                        acquireWakeLock()
+                        Toast.makeText(this, "スリープを無効にしました", Toast.LENGTH_SHORT).show()
+                    } else {
+                        releaseWakeLock()
+                        Toast.makeText(this, "スリープを有効にしました", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+    
     override fun onStop() {
         super.onStop()
         stopUIUpdate()
@@ -307,6 +377,12 @@ class MainActivity : AppCompatActivity() {
             unbindService(serviceConnection)
             serviceBound = false
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // WakeLockを確実に解放
+        releaseWakeLock()
     }
     
     companion object {
