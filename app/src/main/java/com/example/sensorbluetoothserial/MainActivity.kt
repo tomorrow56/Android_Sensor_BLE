@@ -240,10 +240,19 @@ class MainActivity : AppCompatActivity() {
         stopButton.isEnabled = isCollecting
         samplingRateSpinner.isEnabled = !isCollecting
         
-        statusText.text = if (isCollecting) {
-            "データ収集中"
-        } else {
-            "停止中"
+        // ステータステキストの更新
+        updateStatusText()
+    }
+    
+    private fun updateStatusText() {
+        val isCollecting = blePeripheralService?.isCollecting() ?: false
+        val isSleepDisabled = wakeLock?.isHeld ?: false
+        
+        statusText.text = when {
+            isCollecting && isSleepDisabled -> "データ収集中 (スリープ無効)"
+            isCollecting -> "データ収集中"
+            isSleepDisabled -> "停止中 (スリープ無効)"
+            else -> "停止中"
         }
     }
     
@@ -323,7 +332,7 @@ class MainActivity : AppCompatActivity() {
         wakeLock?.let {
             if (!it.isHeld) {
                 it.acquire()
-                statusText.text = "データ収集中 (スリープ無効)"
+                updateStatusText()
             }
         }
     }
@@ -332,6 +341,7 @@ class MainActivity : AppCompatActivity() {
         wakeLock?.let {
             if (it.isHeld) {
                 it.release()
+                updateStatusText()
             }
         }
     }
@@ -363,6 +373,7 @@ class MainActivity : AppCompatActivity() {
                         releaseWakeLock()
                         Toast.makeText(this, "スリープを有効にしました", Toast.LENGTH_SHORT).show()
                     }
+                    updateStatusText()
                 }
                 true
             }
