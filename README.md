@@ -112,6 +112,29 @@ Androidスマートフォンの内部センサーの値を**Bluetooth Low Energy
 }
 ```
 
+## Web可視化デモ
+
+このプロジェクトには、2種類のWeb可視化デモが含まれています。
+
+### WebUI - データ表示とCSVエクスポート
+
+センサーデータをリアルタイムで表示し、CSVファイルとしてエクスポートできるシンプルなWebアプリケーションです。
+
+- **場所**: `WebUI/`
+- **機能**: データ表示、CSVエクスポート、接続統計
+- **詳細**: [WebUI/README.md](WebUI/README.md)
+
+### WebUI_Cube - 3D可視化デモ
+
+IMUセンサーデータを3Dキューブで可視化するインタラクティブなWebアプリケーションです。
+
+- **場所**: `WebUI_Cube/`
+- **機能**: 3Dキューブのリアルタイム姿勢表示、インタラクティブな視点操作
+- **技術**: Three.js、Web Bluetooth API
+- **詳細**: [WebUI_Cube/README.md](WebUI_Cube/README.md)
+
+両方のデモアプリケーションは、Web Bluetooth APIを使用してブラウザから直接Androidデバイスに接続できます。Chrome、Edge、Operaなどのブラウザでご利用いただけます。
+
 ## プロジェクト構造
 
 ```
@@ -127,6 +150,14 @@ Android_Sensor_BLE_Serial/
 │   │       ├── res/
 │   │       └── AndroidManifest.xml
 │   └── build.gradle
+├── WebUI/                                      # Webデータ表示デモ
+│   ├── index.html
+│   ├── app.js
+│   └── README.md
+├── WebUI_Cube/                                 # Web 3D可視化デモ
+│   ├── index.html
+│   ├── app.js
+│   └── README.md
 ├── receive_ble_sensor_data.py                 # PC側BLEデータ受信スクリプト
 └── README.md
 ```
