@@ -35,6 +35,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var gyroscopeText: TextView
     private lateinit var lightText: TextView
     private lateinit var gpsText: TextView
+    private lateinit var magnetometerText: TextView
+    private lateinit var proximityText: TextView
+    private lateinit var gravityText: TextView
     
     private var blePeripheralService: BlePeripheralService? = null
     private var serviceBound = false
@@ -71,6 +74,9 @@ class MainActivity : AppCompatActivity() {
         gyroscopeText = findViewById(R.id.gyroscopeText)
         lightText = findViewById(R.id.lightText)
         gpsText = findViewById(R.id.gpsText)
+        magnetometerText = findViewById(R.id.magnetometerText)
+        proximityText = findViewById(R.id.proximityText)
+        gravityText = findViewById(R.id.gravityText)
         
         setupSamplingRateSpinner()
         setupButtons()
@@ -198,6 +204,9 @@ class MainActivity : AppCompatActivity() {
         gyroscopeText.text = "X: --\nY: --\nZ: --"
         lightText.text = "照度: --"
         gpsText.text = "緯度: --\n経度: --\n高度: --\n精度: --\n速度: --"
+        magnetometerText.text = "X: --\nY: --\nZ: --"
+        proximityText.text = "距離: --"
+        gravityText.text = "X: --\nY: --\nZ: --"
     }
     
     private fun updateSensorDisplay() {
@@ -229,6 +238,27 @@ class MainActivity : AppCompatActivity() {
             gpsText.text = String.format(
                 "緯度: %.6f\n経度: %.6f\n高度: %.1f m\n精度: %.1f m\n速度: %.1f m/s",
                 gps.latitude, gps.longitude, gps.altitude, gps.accuracy, gps.speed
+            )
+        }
+        
+        // 磁気センサー
+        data.magnetometer?.let { mag ->
+            magnetometerText.text = String.format(
+                "X: %.3f\nY: %.3f\nZ: %.3f",
+                mag.x, mag.y, mag.z
+            )
+        }
+        
+        // 近接センサー
+        data.proximity?.let { prox ->
+            proximityText.text = String.format("距離: %.1f", prox.distance)
+        }
+        
+        // 重力センサー
+        data.gravity?.let { grav ->
+            gravityText.text = String.format(
+                "X: %.3f\nY: %.3f\nZ: %.3f",
+                grav.x, grav.y, grav.z
             )
         }
     }

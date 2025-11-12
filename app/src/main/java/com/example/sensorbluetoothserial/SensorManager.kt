@@ -21,11 +21,17 @@ class SensorDataManager(private val context: Context) : SensorEventListener, Loc
     private var accelerometerSensor: Sensor? = null
     private var gyroscopeSensor: Sensor? = null
     private var lightSensor: Sensor? = null
+    private var magnetometerSensor: Sensor? = null
+    private var proximitySensor: Sensor? = null
+    private var gravitySensor: Sensor? = null
     
     private var currentAccelerometer: AccelerometerData? = null
     private var currentGyroscope: GyroscopeData? = null
     private var currentLight: LightData? = null
     private var currentGps: GpsData? = null
+    private var currentMagnetometer: MagnetometerData? = null
+    private var currentProximity: ProximityData? = null
+    private var currentGravity: GravityData? = null
     
     var samplingRateUs: Int = AndroidSensorManager.SENSOR_DELAY_NORMAL
         set(value) {
@@ -42,6 +48,9 @@ class SensorDataManager(private val context: Context) : SensorEventListener, Loc
         accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        magnetometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+        gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
     }
     
     fun start() {
@@ -56,6 +65,18 @@ class SensorDataManager(private val context: Context) : SensorEventListener, Loc
         }
         
         lightSensor?.let {
+            sensorManager.registerListener(this, it, samplingRateUs)
+        }
+        
+        magnetometerSensor?.let {
+            sensorManager.registerListener(this, it, samplingRateUs)
+        }
+        
+        proximitySensor?.let {
+            sensorManager.registerListener(this, it, samplingRateUs)
+        }
+        
+        gravitySensor?.let {
             sensorManager.registerListener(this, it, samplingRateUs)
         }
         
@@ -94,7 +115,10 @@ class SensorDataManager(private val context: Context) : SensorEventListener, Loc
             accelerometer = currentAccelerometer,
             gyroscope = currentGyroscope,
             light = currentLight,
-            gps = currentGps
+            gps = currentGps,
+            magnetometer = currentMagnetometer,
+            proximity = currentProximity,
+            gravity = currentGravity
         )
     }
     
@@ -117,6 +141,23 @@ class SensorDataManager(private val context: Context) : SensorEventListener, Loc
                 }
                 Sensor.TYPE_LIGHT -> {
                     currentLight = LightData(lux = it.values[0])
+                }
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    currentMagnetometer = MagnetometerData(
+                        x = it.values[0],
+                        y = it.values[1],
+                        z = it.values[2]
+                    )
+                }
+                Sensor.TYPE_PROXIMITY -> {
+                    currentProximity = ProximityData(distance = it.values[0])
+                }
+                Sensor.TYPE_GRAVITY -> {
+                    currentGravity = GravityData(
+                        x = it.values[0],
+                        y = it.values[1],
+                        z = it.values[2]
+                    )
                 }
             }
         }

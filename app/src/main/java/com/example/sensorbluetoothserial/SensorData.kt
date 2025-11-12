@@ -5,7 +5,10 @@ data class SensorData(
     val accelerometer: AccelerometerData? = null,
     val gyroscope: GyroscopeData? = null,
     val light: LightData? = null,
-    val gps: GpsData? = null
+    val gps: GpsData? = null,
+    val magnetometer: MagnetometerData? = null,
+    val proximity: ProximityData? = null,
+    val gravity: GravityData? = null
 )
 
 data class AccelerometerData(
@@ -30,4 +33,20 @@ data class GpsData(
     val altitude: Double,
     val accuracy: Float,
     val speed: Float
+)
+
+data class MagnetometerData(
+    val x: Float,
+    val y: Float,
+    val z: Float
+)
+
+data class ProximityData(
+    val distance: Float
+)
+
+data class GravityData(
+    val x: Float,
+    val y: Float,
+    val z: Float
 )

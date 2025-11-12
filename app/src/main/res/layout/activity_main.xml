@@ -183,6 +183,63 @@
                 android:textSize="14sp"
                 android:fontFamily="monospace"
                 android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp" />
+
+            <!-- 磁気センサー -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="磁気センサー (μT)"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp" />
+
+            <TextView
+                android:id="@+id/magnetometerText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="X: --\nY: --\nZ: --"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp" />
+
+            <!-- 近接センサー -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="近接センサー (cm)"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp" />
+
+            <TextView
+                android:id="@+id/proximityText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="距離: --"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="4dp" />
+
+            <!-- 重力センサー -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="重力センサー (m/s²)"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp" />
+
+            <TextView
+                android:id="@+id/gravityText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="X: --\nY: --\nZ: --"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:layout_marginStart="16dp"
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="8dp" />
 
