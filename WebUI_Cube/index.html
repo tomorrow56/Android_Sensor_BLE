@@ -19,23 +19,23 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
 
         header {
             text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
             backdrop-filter: blur(10px);
         }
 
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
+            font-size: 2rem;
+            margin-bottom: 8px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -49,12 +49,12 @@
 
         .main-content {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: 2.2fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 1200px) {
             .main-content {
                 grid-template-columns: 1fr;
             }
@@ -63,36 +63,38 @@
         .canvas-container {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            aspect-ratio: 16/9;
             position: relative;
+            height: 500px;
+            overflow: hidden;
         }
 
         #canvas3d {
             width: 100%;
             height: 100%;
             border-radius: 10px;
+            display: block;
         }
 
         .control-panel {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
 
         .card {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .card h2 {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
             color: #667eea;
         }
 
@@ -184,24 +186,24 @@
         .sensor-values {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
 
         .sensor-value {
             background: rgba(255, 255, 255, 0.05);
-            padding: 10px;
+            padding: 8px;
             border-radius: 8px;
             text-align: center;
         }
 
         .sensor-value .label {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: #a0a0a0;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
 
         .sensor-value .value {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             font-family: 'Courier New', monospace;
             color: #667eea;
         }
@@ -209,7 +211,7 @@
         .instructions {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
-            padding: 25px;
+            padding: 20px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -311,6 +313,83 @@
                                 <div class="sensor-value">
                                     <div class="label">Z</div>
                                     <div class="value" id="gyroZ">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-group">
+                            <h3>光センサー (lux)</h3>
+                            <div class="sensor-values">
+                                <div class="sensor-value">
+                                    <div class="label">照度</div>
+                                    <div class="value" id="light">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-group">
+                            <h3>GPS</h3>
+                            <div class="sensor-values">
+                                <div class="sensor-value">
+                                    <div class="label">緯度</div>
+                                    <div class="value" id="gpsLat">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">経度</div>
+                                    <div class="value" id="gpsLng">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">高度</div>
+                                    <div class="value" id="gpsAlt">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">精度</div>
+                                    <div class="value" id="gpsAcc">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">速度</div>
+                                    <div class="value" id="gpsSpeed">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-group">
+                            <h3>磁気 (μT)</h3>
+                            <div class="sensor-values">
+                                <div class="sensor-value">
+                                    <div class="label">X</div>
+                                    <div class="value" id="magnetX">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">Y</div>
+                                    <div class="value" id="magnetY">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">Z</div>
+                                    <div class="value" id="magnetZ">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-group">
+                            <h3>近接 (cm)</h3>
+                            <div class="sensor-values">
+                                <div class="sensor-value">
+                                    <div class="label">距離</div>
+                                    <div class="value" id="proximity">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sensor-group">
+                            <h3>重力 (m/s²)</h3>
+                            <div class="sensor-values">
+                                <div class="sensor-value">
+                                    <div class="label">X</div>
+                                    <div class="value" id="gravityX">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">Y</div>
+                                    <div class="value" id="gravityY">--</div>
+                                </div>
+                                <div class="sensor-value">
+                                    <div class="label">Z</div>
+                                    <div class="value" id="gravityZ">--</div>
                                 </div>
                             </div>
                         </div>

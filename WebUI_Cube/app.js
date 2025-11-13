@@ -30,7 +30,7 @@ function initThreeJS() {
         0.1,
         1000
     );
-    camera.position.set(5, 5, 5);
+    camera.position.set(4, 4, 4);
     camera.lookAt(0, 0, 0);
     
     // Renderer
@@ -72,7 +72,7 @@ function initThreeJS() {
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
     let cameraRotation = { x: 0, y: 0 };
-    let cameraDistance = 8.66;
+    let cameraDistance = 6.5;
     
     canvas.addEventListener('mousedown', (e) => {
         isDragging = true;
@@ -141,17 +141,75 @@ function initThreeJS() {
 
 // Update sensor data display
 function updateSensorDisplay(data) {
-    document.getElementById('accelX').textContent = data.accelerometer.x.toFixed(2);
-    document.getElementById('accelY').textContent = data.accelerometer.y.toFixed(2);
-    document.getElementById('accelZ').textContent = data.accelerometer.z.toFixed(2);
+    // 加速度センサー
+    if (data.accelerometer) {
+        document.getElementById('accelX').textContent = data.accelerometer.x.toFixed(2);
+        document.getElementById('accelY').textContent = data.accelerometer.y.toFixed(2);
+        document.getElementById('accelZ').textContent = data.accelerometer.z.toFixed(2);
+    }
     
-    document.getElementById('gyroX').textContent = data.gyroscope.x.toFixed(2);
-    document.getElementById('gyroY').textContent = data.gyroscope.y.toFixed(2);
-    document.getElementById('gyroZ').textContent = data.gyroscope.z.toFixed(2);
+    // ジャイロスコープ
+    if (data.gyroscope) {
+        document.getElementById('gyroX').textContent = data.gyroscope.x.toFixed(3);
+        document.getElementById('gyroY').textContent = data.gyroscope.y.toFixed(3);
+        document.getElementById('gyroZ').textContent = data.gyroscope.z.toFixed(3);
+    }
+    
+    // 光センサー
+    if (data.light) {
+        document.getElementById('light').textContent = data.light.lux.toFixed(1);
+    }
+    
+    // GPS
+    if (data.gps) {
+        document.getElementById('gpsLat').textContent = data.gps.latitude.toFixed(6);
+        document.getElementById('gpsLng').textContent = data.gps.longitude.toFixed(6);
+        document.getElementById('gpsAlt').textContent = data.gps.altitude.toFixed(1);
+        document.getElementById('gpsAcc').textContent = data.gps.accuracy.toFixed(1);
+        document.getElementById('gpsSpeed').textContent = data.gps.speed.toFixed(2);
+    }
+    
+    // 磁気センサー
+    if (data.magnetometer) {
+        document.getElementById('magnetX').textContent = data.magnetometer.x.toFixed(2);
+        document.getElementById('magnetY').textContent = data.magnetometer.y.toFixed(2);
+        document.getElementById('magnetZ').textContent = data.magnetometer.z.toFixed(2);
+    }
+    
+    // 近接センサー
+    if (data.proximity) {
+        document.getElementById('proximity').textContent = data.proximity.distance.toFixed(1);
+    }
+    
+    // 重力センサー
+    if (data.gravity) {
+        document.getElementById('gravityX').textContent = data.gravity.x.toFixed(2);
+        document.getElementById('gravityY').textContent = data.gravity.y.toFixed(2);
+        document.getElementById('gravityZ').textContent = data.gravity.z.toFixed(2);
+    }
+}
+
+// Reset all sensor displays
+function resetSensorDisplays() {
+    const sensorIds = [
+        'accelX', 'accelY', 'accelZ',
+        'gyroX', 'gyroY', 'gyroZ',
+        'light',
+        'gpsLat', 'gpsLng', 'gpsAlt', 'gpsAcc', 'gpsSpeed',
+        'magnetX', 'magnetY', 'magnetZ',
+        'proximity',
+        'gravityX', 'gravityY', 'gravityZ'
+    ];
+    
+    sensorIds.forEach(id => {
+        document.getElementById(id).textContent = '--';
+    });
 }
 
 // Update cube rotation from sensor data
 function updateCubeRotation(data) {
+    if (!data.accelerometer || !data.gyroscope) return;
+    
     const { accelerometer, gyroscope } = data;
     
     // Calculate pitch and roll from accelerometer
@@ -162,7 +220,7 @@ function updateCubeRotation(data) {
     targetRotation.z = roll;
     
     // Integrate gyroscope data for yaw
-    targetRotation.y += gyroscope.z * 0.01;
+    targetRotation.y += gyroscope.z * 0.04;
 }
 
 // Bluetooth connection
@@ -213,6 +271,7 @@ async function disconnectBluetooth() {
         
         updateConnectionUI();
         document.getElementById('deviceName').textContent = '';
+        resetSensorDisplays();
         
     } catch (error) {
         console.error('Disconnect error:', error);
@@ -225,6 +284,7 @@ function onDisconnected() {
     isReceiving = false;
     updateConnectionUI();
     document.getElementById('deviceName').textContent = '';
+    resetSensorDisplays();
 }
 
 // Start receiving data

@@ -45,7 +45,15 @@ class BluetoothSensorReceiver {
             gpsLat: document.getElementById('gpsLat'),
             gpsLng: document.getElementById('gpsLng'),
             gpsAlt: document.getElementById('gpsAlt'),
-            gpsAcc: document.getElementById('gpsAcc')
+            gpsAcc: document.getElementById('gpsAcc'),
+            gpsSpeed: document.getElementById('gpsSpeed'),
+            magnetX: document.getElementById('magnetX'),
+            magnetY: document.getElementById('magnetY'),
+            magnetZ: document.getElementById('magnetZ'),
+            proximity: document.getElementById('proximity'),
+            gravityX: document.getElementById('gravityX'),
+            gravityY: document.getElementById('gravityY'),
+            gravityZ: document.getElementById('gravityZ')
         };
     }
     
@@ -228,6 +236,26 @@ class BluetoothSensorReceiver {
             this.elements.gpsLng.textContent = data.gps.longitude?.toFixed(6) || '--';
             this.elements.gpsAlt.textContent = data.gps.altitude?.toFixed(1) || '--';
             this.elements.gpsAcc.textContent = data.gps.accuracy?.toFixed(1) || '--';
+            this.elements.gpsSpeed.textContent = data.gps.speed?.toFixed(2) || '--';
+        }
+        
+        // 磁気センサー
+        if (data.magnetometer) {
+            this.elements.magnetX.textContent = data.magnetometer.x?.toFixed(3) || '--';
+            this.elements.magnetY.textContent = data.magnetometer.y?.toFixed(3) || '--';
+            this.elements.magnetZ.textContent = data.magnetometer.z?.toFixed(3) || '--';
+        }
+        
+        // 近接センサー
+        if (data.proximity) {
+            this.elements.proximity.textContent = data.proximity.distance?.toFixed(1) || '--';
+        }
+        
+        // 重力センサー
+        if (data.gravity) {
+            this.elements.gravityX.textContent = data.gravity.x?.toFixed(3) || '--';
+            this.elements.gravityY.textContent = data.gravity.y?.toFixed(3) || '--';
+            this.elements.gravityZ.textContent = data.gravity.z?.toFixed(3) || '--';
         }
     }
     
@@ -277,7 +305,13 @@ class BluetoothSensorReceiver {
                 return;
             }
             
-            const headers = ['Timestamp', 'Accel X', 'Accel Y', 'Accel Z', 'Gyro X', 'Gyro Y', 'Gyro Z', 'Light', 'GPS Lat', 'GPS Lng', 'GPS Alt', 'GPS Acc'];
+            const headers = [
+                'Timestamp', 'Accel X', 'Accel Y', 'Accel Z', 
+                'Gyro X', 'Gyro Y', 'Gyro Z', 'Light', 
+                'GPS Lat', 'GPS Lng', 'GPS Alt', 'GPS Acc', 'GPS Speed',
+                'Magnet X', 'Magnet Y', 'Magnet Z',
+                'Proximity', 'Gravity X', 'Gravity Y', 'Gravity Z'
+            ];
             const rows = this.sensorData.map(data => [
                 data.timestamp || '',
                 data.accelerometer?.x || '',
@@ -290,7 +324,15 @@ class BluetoothSensorReceiver {
                 data.gps?.latitude || '',
                 data.gps?.longitude || '',
                 data.gps?.altitude || '',
-                data.gps?.accuracy || ''
+                data.gps?.accuracy || '',
+                data.gps?.speed || '',
+                data.magnetometer?.x || '',
+                data.magnetometer?.y || '',
+                data.magnetometer?.z || '',
+                data.proximity?.distance || '',
+                data.gravity?.x || '',
+                data.gravity?.y || '',
+                data.gravity?.z || ''
             ]);
             
             const csvContent = [headers, ...rows]
@@ -323,7 +365,10 @@ class BluetoothSensorReceiver {
         this.updateButtonStates();
         
         // センサーデータ表示をリセット
-        ['accelX', 'accelY', 'accelZ', 'gyroX', 'gyroY', 'gyroZ', 'light', 'gpsLat', 'gpsLng', 'gpsAlt', 'gpsAcc'].forEach(id => {
+        ['accelX', 'accelY', 'accelZ', 'gyroX', 'gyroY', 'gyroZ', 'light', 
+         'gpsLat', 'gpsLng', 'gpsAlt', 'gpsAcc', 'gpsSpeed',
+         'magnetX', 'magnetY', 'magnetZ', 'proximity',
+         'gravityX', 'gravityY', 'gravityZ'].forEach(id => {
             this.elements[id].textContent = '--';
         });
         

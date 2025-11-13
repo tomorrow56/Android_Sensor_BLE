@@ -52,7 +52,10 @@ class SensorDataReceiverBLE:
                 'accel_x', 'accel_y', 'accel_z',
                 'gyro_x', 'gyro_y', 'gyro_z',
                 'light_lux',
-                'gps_lat', 'gps_lon', 'gps_alt', 'gps_accuracy', 'gps_speed'
+                'gps_lat', 'gps_lon', 'gps_alt', 'gps_accuracy', 'gps_speed',
+                'magnet_x', 'magnet_y', 'magnet_z',
+                'proximity_distance',
+                'gravity_x', 'gravity_y', 'gravity_z'
             ])
             print(f"✓ CSVファイルを作成しました: {self.output_csv}")
         except Exception as e:
@@ -83,6 +86,9 @@ class SensorDataReceiverBLE:
             gyro = data.get('gyroscope', {})
             light = data.get('light', {})
             gps = data.get('gps', {})
+            magnetometer = data.get('magnetometer', {})
+            proximity = data.get('proximity', {})
+            gravity = data.get('gravity', {})
 
             self.csv_writer.writerow([
                 timestamp,
@@ -91,7 +97,10 @@ class SensorDataReceiverBLE:
                 gyro.get('x', ''), gyro.get('y', ''), gyro.get('z', ''),
                 light.get('lux', ''),
                 gps.get('latitude', ''), gps.get('longitude', ''), gps.get('altitude', ''),
-                gps.get('accuracy', ''), gps.get('speed', '')
+                gps.get('accuracy', ''), gps.get('speed', ''),
+                magnetometer.get('x', ''), magnetometer.get('y', ''), magnetometer.get('z', ''),
+                proximity.get('distance', ''),
+                gravity.get('x', ''), gravity.get('y', ''), gravity.get('z', '')
             ])
             self.csv_file.flush()
         except Exception as e:
@@ -102,17 +111,32 @@ class SensorDataReceiverBLE:
         self.data_count += 1
         dt = datetime.fromtimestamp(data.get('timestamp', 0) / 1000.0)
         print(f"\n--- データ #{self.data_count} ({dt.strftime('%H:%M:%S.%f')[:-3]}) ---")
+        
         if 'accelerometer' in data and data['accelerometer']:
             accel = data['accelerometer']
             print(f"加速度: X={accel['x']:.3f}, Y={accel['y']:.3f}, Z={accel['z']:.3f} m/s²")
+        
         if 'gyroscope' in data and data['gyroscope']:
             gyro = data['gyroscope']
             print(f"ジャイロ: X={gyro['x']:.3f}, Y={gyro['y']:.3f}, Z={gyro['z']:.3f} rad/s")
+        
         if 'light' in data and data['light']:
             print(f"光: {data['light']['lux']:.1f} lux")
+        
         if 'gps' in data and data['gps']:
             gps = data['gps']
             print(f"GPS: 緯度={gps['latitude']:.6f}, 経度={gps['longitude']:.6f}, 高度={gps['altitude']:.1f}m")
+        
+        if 'magnetometer' in data and data['magnetometer']:
+            magnet = data['magnetometer']
+            print(f"磁気: X={magnet['x']:.3f}, Y={magnet['y']:.3f}, Z={magnet['z']:.3f} μT")
+        
+        if 'proximity' in data and data['proximity']:
+            print(f"近接: {data['proximity']['distance']:.1f} cm")
+        
+        if 'gravity' in data and data['gravity']:
+            gravity = data['gravity']
+            print(f"重力: X={gravity['x']:.3f}, Y={gravity['y']:.3f}, Z={gravity['z']:.3f} m/s²")
 
     async def run(self):
         print("\n" + "="*60)
