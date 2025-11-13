@@ -12,7 +12,7 @@ android {
         minSdk 26 // Android 8.0 (Oreo)以降を推奨 (BLEのバックグラウンドスキャン要件のため)
         targetSdk 34
         versionCode 4
-        versionName "1.2"
+        versionName "1.2.1"
     }
 
     signingConfigs {
