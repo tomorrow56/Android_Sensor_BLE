@@ -95,6 +95,8 @@ SensorData sensorData;
 String lastError = "";
 unsigned long lastDataReceived = 0;
 bool scanComplete = false;
+unsigned long scanStartTime = 0;
+const unsigned long SCAN_DURATION = 5000; // 5秒間スキャン
 
 // Notificationコールバック関数
 static void notifyCallback(
@@ -127,7 +129,7 @@ static void notifyCallback(
   sensorData.timestamp = doc["timestamp"] | 0L;
   
   // 加速度センサー
-  if (doc.containsKey("accelerometer")) {
+  if (!doc["accelerometer"].isNull()) {
     sensorData.accelerometer.x = doc["accelerometer"]["x"] | 0.0f;
     sensorData.accelerometer.y = doc["accelerometer"]["y"] | 0.0f;
     sensorData.accelerometer.z = doc["accelerometer"]["z"] | 0.0f;
@@ -135,7 +137,7 @@ static void notifyCallback(
   }
   
   // ジャイロスコープ
-  if (doc.containsKey("gyroscope")) {
+  if (!doc["gyroscope"].isNull()) {
     sensorData.gyroscope.x = doc["gyroscope"]["x"] | 0.0f;
     sensorData.gyroscope.y = doc["gyroscope"]["y"] | 0.0f;
     sensorData.gyroscope.z = doc["gyroscope"]["z"] | 0.0f;
@@ -143,13 +145,13 @@ static void notifyCallback(
   }
   
   // 光センサー
-  if (doc.containsKey("light")) {
+  if (!doc["light"].isNull()) {
     sensorData.light.lux = doc["light"]["lux"] | 0.0f;
     sensorData.hasLight = true;
   }
   
   // GPS
-  if (doc.containsKey("gps")) {
+  if (!doc["gps"].isNull()) {
     sensorData.gps.latitude = doc["gps"]["latitude"] | 0.0;
     sensorData.gps.longitude = doc["gps"]["longitude"] | 0.0;
     sensorData.gps.altitude = doc["gps"]["altitude"] | 0.0;
@@ -159,7 +161,7 @@ static void notifyCallback(
   }
   
   // 磁気センサー
-  if (doc.containsKey("magnetometer")) {
+  if (!doc["magnetometer"].isNull()) {
     sensorData.magnetometer.x = doc["magnetometer"]["x"] | 0.0f;
     sensorData.magnetometer.y = doc["magnetometer"]["y"] | 0.0f;
     sensorData.magnetometer.z = doc["magnetometer"]["z"] | 0.0f;
@@ -167,13 +169,13 @@ static void notifyCallback(
   }
   
   // 近接センサー
-  if (doc.containsKey("proximity")) {
+  if (!doc["proximity"].isNull()) {
     sensorData.proximity.distance = doc["proximity"]["distance"] | 0.0f;
     sensorData.hasProximity = true;
   }
   
   // 重力センサー
-  if (doc.containsKey("gravity")) {
+  if (!doc["gravity"].isNull()) {
     sensorData.gravity.x = doc["gravity"]["x"] | 0.0f;
     sensorData.gravity.y = doc["gravity"]["y"] | 0.0f;
     sensorData.gravity.z = doc["gravity"]["z"] | 0.0f;
@@ -301,6 +303,7 @@ void startScan() {
   scrollOffset = 0;
   scanComplete = false;
   currentState = STATE_SCANNING;
+  scanStartTime = millis();
   
   Serial.println("Starting BLE scan...");
   BLEScan* pBLEScan = BLEDevice::getScan();
@@ -308,7 +311,7 @@ void startScan() {
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(5, false); // 5秒間スキャン
+  pBLEScan->start(0, false); // 継続スキャン(手動で停止)
 }
 
 void setup() {
@@ -341,8 +344,9 @@ void loop() {
   // ボタン処理
   handleButtons();
   
-  // スキャン完了チェック
-  if (currentState == STATE_SCANNING && !BLEDevice::getScan()->isScanning()) {
+  // スキャン完了チェック(タイマーベース)
+  if (currentState == STATE_SCANNING && (millis() - scanStartTime >= SCAN_DURATION)) {
+    BLEDevice::getScan()->stop();
     scanComplete = true;
     currentState = STATE_DEVICE_LIST;
     Serial.print("Scan complete. Found ");
