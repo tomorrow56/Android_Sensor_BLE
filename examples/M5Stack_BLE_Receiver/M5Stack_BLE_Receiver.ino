@@ -95,8 +95,6 @@ SensorData sensorData;
 String lastError = "";
 unsigned long lastDataReceived = 0;
 bool scanComplete = false;
-unsigned long scanStartTime = 0;
-const unsigned long SCAN_DURATION = 5000; // 5秒間スキャン
 
 // Notificationコールバック関数
 static void notifyCallback(
@@ -303,11 +301,8 @@ void startScan() {
   scrollOffset = 0;
   scanComplete = false;
   currentState = STATE_SCANNING;
-  scanStartTime = millis();
   
   Serial.println("Starting BLE scan...");
-  Serial.print("[DEBUG] scanStartTime = ");
-  Serial.println(scanStartTime);
   Serial.print("[DEBUG] currentState = ");
   Serial.println(currentState);
   
@@ -316,9 +311,21 @@ void startScan() {
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
-  pBLEScan->start(0, false); // 継続スキャン(手動で停止)
   
-  Serial.println("[DEBUG] BLE scan started");
+  Serial.println("[DEBUG] Starting BLE scan for 5 seconds...");
+  
+  // 5秒間の同期スキャンを実行
+  pBLEScan->start(5, false);
+  
+  Serial.println("[DEBUG] BLE scan completed");
+  
+  // スキャン完了後の処理
+  scanComplete = true;
+  currentState = STATE_DEVICE_LIST;
+  Serial.print("Scan complete. Found ");
+  Serial.print(deviceList.size());
+  Serial.println(" devices");
+  Serial.println("[DEBUG] State changed to STATE_DEVICE_LIST");
 }
 
 void setup() {
@@ -354,29 +361,8 @@ void loop() {
   // ボタン処理
   handleButtons();
   
-  // スキャン完了チェック(タイマーベース)
-  static unsigned long lastDebugTime = 0;
-  if (currentState == STATE_SCANNING) {
-    unsigned long elapsed = millis() - scanStartTime;
-    if (millis() - lastDebugTime >= 1000) {
-      Serial.print("[DEBUG] Scanning... elapsed: ");
-      Serial.print(elapsed);
-      Serial.print(" ms, devices found: ");
-      Serial.println(deviceList.size());
-      lastDebugTime = millis();
-    }
-  }
-  
-  if (currentState == STATE_SCANNING && (millis() - scanStartTime >= SCAN_DURATION)) {
-    Serial.println("[DEBUG] Scan duration reached, stopping scan...");
-    BLEDevice::getScan()->stop();
-    scanComplete = true;
-    currentState = STATE_DEVICE_LIST;
-    Serial.print("Scan complete. Found ");
-    Serial.print(deviceList.size());
-    Serial.println(" devices");
-    Serial.println("[DEBUG] State changed to STATE_DEVICE_LIST");
-  }
+  // 注: スキャンはstartScan()内で同期的に実行されるため、
+  // loop()内でのスキャン完了チェックは不要
   
   // 画面更新
   updateDisplay();
