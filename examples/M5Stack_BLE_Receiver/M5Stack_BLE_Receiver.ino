@@ -306,12 +306,19 @@ void startScan() {
   scanStartTime = millis();
   
   Serial.println("Starting BLE scan...");
+  Serial.print("[DEBUG] scanStartTime = ");
+  Serial.println(scanStartTime);
+  Serial.print("[DEBUG] currentState = ");
+  Serial.println(currentState);
+  
   BLEScan* pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
   pBLEScan->start(0, false); // 継続スキャン(手動で停止)
+  
+  Serial.println("[DEBUG] BLE scan started");
 }
 
 void setup() {
@@ -336,6 +343,9 @@ void setup() {
   
   // 初回スキャン開始
   startScan();
+  
+  // 初期画面更新
+  updateDisplay();
 }
 
 void loop() {
@@ -345,13 +355,27 @@ void loop() {
   handleButtons();
   
   // スキャン完了チェック(タイマーベース)
+  static unsigned long lastDebugTime = 0;
+  if (currentState == STATE_SCANNING) {
+    unsigned long elapsed = millis() - scanStartTime;
+    if (millis() - lastDebugTime >= 1000) {
+      Serial.print("[DEBUG] Scanning... elapsed: ");
+      Serial.print(elapsed);
+      Serial.print(" ms, devices found: ");
+      Serial.println(deviceList.size());
+      lastDebugTime = millis();
+    }
+  }
+  
   if (currentState == STATE_SCANNING && (millis() - scanStartTime >= SCAN_DURATION)) {
+    Serial.println("[DEBUG] Scan duration reached, stopping scan...");
     BLEDevice::getScan()->stop();
     scanComplete = true;
     currentState = STATE_DEVICE_LIST;
     Serial.print("Scan complete. Found ");
     Serial.print(deviceList.size());
     Serial.println(" devices");
+    Serial.println("[DEBUG] State changed to STATE_DEVICE_LIST");
   }
   
   // 画面更新
@@ -431,6 +455,9 @@ void updateDisplay() {
   M5.Display.fillScreen(BLACK);
   M5.Display.setCursor(0, 0);
   M5.Display.setTextSize(2);
+  
+  Serial.print("[DEBUG] updateDisplay called, currentState = ");
+  Serial.println(currentState);
   
   if (currentState == STATE_SCANNING) {
     // スキャン中の表示
