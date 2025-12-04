@@ -38,6 +38,7 @@ enum AppState {
 };
 
 AppState currentState = STATE_SCANNING;
+AppState lastState = STATE_SCANNING; // 前回の状態を記録
 
 // BLE関連の変数
 static boolean connected = false;
@@ -218,8 +219,14 @@ bool connectToServer(String address) {
   
   // アドレスからBLEAddressオブジェクトを作成
   BLEAddress bleAddress(address.c_str());
+  Serial.print(" - BLE Address: ");
+  Serial.println(bleAddress.toString().c_str());
+  
+  // 接続タイムアウトを設定（10秒）
+  pClient->setConnectTimeout(10);
   
   // デバイスに接続
+  Serial.println(" - Attempting to connect...");
   if (!pClient->connect(bleAddress)) {
     Serial.println(" - Failed to connect");
     lastError = "Connection Failed";
@@ -364,8 +371,18 @@ void loop() {
   // 注: スキャンはstartScan()内で同期的に実行されるため、
   // loop()内でのスキャン完了チェックは不要
   
-  // 画面更新
-  updateDisplay();
+  // 状態が変わったときのみ画面更新
+  if (currentState != lastState) {
+    updateDisplay();
+    lastState = currentState;
+  }
+  
+  // 接続中は定期的にデータ部分を更新（500msごと）
+  static unsigned long lastDataUpdate = 0;
+  if (currentState == STATE_CONNECTED && (millis() - lastDataUpdate >= 500)) {
+    updateSensorDataDisplay();
+    lastDataUpdate = millis();
+  }
   
   delay(50);
 }
@@ -392,10 +409,16 @@ void handleButtons() {
     if (M5.BtnB.wasPressed()) {
       if (deviceList.size() > 0) {
         // デバイスに接続
+        Serial.print("[DEBUG] Selected device: ");
+        Serial.print(deviceList[selectedDevice].name);
+        Serial.print(" (");
+        Serial.print(deviceList[selectedDevice].address);
+        Serial.println(")");
         connectToServer(deviceList[selectedDevice].address);
       } else {
         // 再スキャン
         startScan();
+        updateDisplay();
       }
     }
     
@@ -530,32 +553,37 @@ void updateDisplay() {
     M5.Display.println("Please wait...");
     
   } else if (currentState == STATE_CONNECTED) {
-    // センサーデータ表示
-    displaySensorData();
+    // センサーデータ表示（初回のみ全画面表示）
+    M5.Display.fillScreen(BLACK);
+    M5.Display.setCursor(0, 0);
+    M5.Display.setTextSize(2);
+    M5.Display.setTextColor(GREEN);
+    M5.Display.println("Connected");
+    M5.Display.setTextSize(1);
+    M5.Display.setTextColor(WHITE);
+    M5.Display.println("");
+    M5.Display.setTextColor(GREEN);
+    M5.Display.setCursor(0, 225);
+    M5.Display.print("[A]Rescan [B]Disconnect");
   }
 }
 
-void displaySensorData() {
-  M5.Display.fillScreen(BLACK);
-  M5.Display.setCursor(0, 0);
-  M5.Display.setTextSize(2);
-  
-  // 接続状態の表示
-  M5.Display.setTextColor(GREEN);
-  M5.Display.println("Connected");
-  M5.Display.setTextSize(1);
-  M5.Display.setTextColor(WHITE);
-  M5.Display.println("");
+void updateSensorDataDisplay() {
+  // データ表示部分のみ更新（画面クリアなし）
   
   // データ受信タイムアウトチェック
   if (millis() - lastDataReceived > 5000 && lastDataReceived > 0) {
+    // データ部分をクリア
+    M5.Display.fillRect(0, 30, 320, 190, BLACK);
+    M5.Display.setCursor(0, 100);
     M5.Display.setTextColor(RED);
+    M5.Display.setTextSize(1);
     M5.Display.println("No data received");
-    M5.Display.println("");
-    M5.Display.setTextColor(GREEN);
-    M5.Display.println("[A]Rescan [B]Disconnect");
     return;
   }
+  
+  // データ表示部分をクリア（Y=30から220まで）
+  M5.Display.fillRect(0, 30, 320, 190, BLACK);
   
   int y = 30;
   
