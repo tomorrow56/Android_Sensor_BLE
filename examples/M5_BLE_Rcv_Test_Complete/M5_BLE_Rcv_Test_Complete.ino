@@ -63,7 +63,12 @@ struct SensorData {
   float temperature;
   float humidity;
   float proximity;
-  bool hasAccel, hasGyro, hasMag, hasGrav, hasLight, hasPressure, hasTemp, hasHumidity, hasProximity;
+  // GPS
+  double latitude, longitude;
+  float altitude;
+  float speed;
+  float accuracy;
+  bool hasAccel, hasGyro, hasMag, hasGrav, hasLight, hasPressure, hasTemp, hasHumidity, hasProximity, hasGps;
 };
 
 SensorData sensorData;
@@ -89,6 +94,7 @@ class MyClientCallback : public NimBLEClientCallbacks {
 String jsonBuffer = "";
 unsigned long lastNotifyTime = 0;
 int braceCount = 0;
+bool inString = false;  // 文字列内かどうか
 
 // 通知受信コールバック
 static void notifyCallback(
@@ -111,68 +117,79 @@ static void notifyCallback(
   // デバッグ: 受信データの最初と最後を表示
   Serial.print("Received ");
   Serial.print(actualLen);
-  Serial.print(" bytes, first char: 0x");
-  Serial.print(pData[0], HEX);
-  Serial.print(" last char: 0x");
-  Serial.println(pData[actualLen-1], HEX);
+  Serial.print(" bytes, buffer:");
+  Serial.println(jsonBuffer.length());
   
   // 新しいJSONの開始を検出（前回から時間が経過している場合）
   unsigned long now = millis();
-  if (now - lastNotifyTime > 200 && jsonBuffer.length() > 0) {
+  if (now - lastNotifyTime > 300 && jsonBuffer.length() > 0) {
     // 前のデータが不完全なまま新しいデータが来た
     Serial.println("Timeout, clearing incomplete buffer");
     jsonBuffer = "";
     braceCount = 0;
+    inString = false;
   }
   lastNotifyTime = now;
   
-  // 受信データをバッファに追加し、ブレースをカウント
+  // 受信データをバッファに追加
   for (size_t i = 0; i < actualLen; i++) {
     char c = (char)pData[i];
     
-    // 改行は無視（終端マーカーとして使わない）
+    // 改行は無視
     if (c == '\n' || c == '\r') continue;
+    
+    // バッファが空で { 以外が来たら無視
+    if (jsonBuffer.length() == 0 && c != '{') continue;
     
     jsonBuffer += c;
     
-    if (c == '{') {
-      braceCount++;
-    } else if (c == '}') {
-      braceCount--;
-      
-      // ブレースが閉じたら完全なJSONとしてパース
-      if (braceCount == 0 && jsonBuffer.length() > 0) {
-        Serial.print("Complete JSON detected by brace count, length: ");
-        Serial.println(jsonBuffer.length());
+    // 文字列内のブレースは無視
+    if (c == '"' && (jsonBuffer.length() < 2 || jsonBuffer.charAt(jsonBuffer.length() - 2) != '\\')) {
+      inString = !inString;
+    }
+    
+    if (!inString) {
+      if (c == '{') {
+        braceCount++;
+      } else if (c == '}') {
+        braceCount--;
         
-        // ArduinoJsonでパース
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, jsonBuffer);
-        
-        if (error) {
-          Serial.print("JSON parse error: ");
-          Serial.println(error.c_str());
-          // パース失敗時は部分パースを試みる
-          parsePartialJson(jsonBuffer);
-        } else {
-          // 完全なJSONをパース
-          parseCompleteJson(doc);
+        // ブレースが閉じて、バッファが{で始まっていたら完全なJSON
+        if (braceCount == 0 && jsonBuffer.length() > 10 && jsonBuffer.charAt(0) == '{') {
+          Serial.print("Complete JSON, length: ");
+          Serial.println(jsonBuffer.length());
+          
+          // ArduinoJsonでパース
+          JsonDocument doc;
+          DeserializationError error = deserializeJson(doc, jsonBuffer);
+          
+          if (error) {
+            Serial.print("JSON parse error: ");
+            Serial.println(error.c_str());
+            // パース失敗時は部分パースを試みる
+            parsePartialJson(jsonBuffer);
+          } else {
+            // 完全なJSONをパース
+            parseCompleteJson(doc);
+          }
+          
+          jsonBuffer = "";
+          braceCount = 0;
+          inString = false;
         }
-        
-        jsonBuffer = "";
-        braceCount = 0;
       }
     }
   }
   
   // バッファが大きくなりすぎたらクリアして部分パースを試みる
-  if (jsonBuffer.length() > 4000) {
+  if (jsonBuffer.length() > 2000) {
     Serial.print("Buffer large (");
     Serial.print(jsonBuffer.length());
     Serial.println("), trying partial parse");
     parsePartialJson(jsonBuffer);
     jsonBuffer = "";
     braceCount = 0;
+    inString = false;
   }
   
   lastDataReceived = millis();
@@ -242,6 +259,16 @@ void parseCompleteJson(JsonDocument& doc) {
   if (doc["proximity"].is<JsonObject>()) {
     sensorData.proximity = doc["proximity"]["distance"] | 0.0f;
     sensorData.hasProximity = true;
+  }
+  
+  // GPS/位置情報
+  if (doc["gps"].is<JsonObject>()) {
+    sensorData.latitude = doc["gps"]["latitude"] | 0.0;
+    sensorData.longitude = doc["gps"]["longitude"] | 0.0;
+    sensorData.altitude = doc["gps"]["altitude"] | 0.0f;
+    sensorData.speed = doc["gps"]["speed"] | 0.0f;
+    sensorData.accuracy = doc["gps"]["accuracy"] | 0.0f;
+    sensorData.hasGps = true;
   }
   
   lastError = "";
@@ -633,32 +660,63 @@ void updateDisplay() {
       }
       
       M5.Display.println();
-      M5.Display.println("Sensor Data:");
       
       // 加速度
       if (sensorData.hasAccel) {
-        M5.Display.printf("Accel: %.2f,%.2f,%.2f\n", 
+        M5.Display.printf("Acc:%.1f,%.1f,%.1f\n", 
                          sensorData.accelX, sensorData.accelY, sensorData.accelZ);
+      }
+      
+      // 重力
+      if (sensorData.hasGrav) {
+        M5.Display.printf("Grv:%.1f,%.1f,%.1f\n", 
+                         sensorData.gravX, sensorData.gravY, sensorData.gravZ);
       }
       
       // ジャイロ
       if (sensorData.hasGyro) {
-        M5.Display.printf("Gyro: %.2f,%.2f,%.2f\n", 
+        M5.Display.printf("Gyr:%.1f,%.1f,%.1f\n", 
                          sensorData.gyroX, sensorData.gyroY, sensorData.gyroZ);
       }
       
-      // その他のセンサー
+      // 磁気
+      if (sensorData.hasMag) {
+        M5.Display.printf("Mag:%.0f,%.0f,%.0f\n", 
+                         sensorData.magX, sensorData.magY, sensorData.magZ);
+      }
+      
+      // 光センサー
       if (sensorData.hasLight) {
-        M5.Display.printf("Light: %.1f\n", sensorData.light);
+        M5.Display.printf("Light:%.0f lux\n", sensorData.light);
       }
+      
+      // 近接センサー
+      if (sensorData.hasProximity) {
+        M5.Display.printf("Prox:%.1f cm\n", sensorData.proximity);
+      }
+      
+      // 気圧
       if (sensorData.hasPressure) {
-        M5.Display.printf("Pressure: %.1f\n", sensorData.pressure);
+        M5.Display.printf("Press:%.1f hPa\n", sensorData.pressure);
       }
+      
+      // 温度
       if (sensorData.hasTemp) {
-        M5.Display.printf("Temp: %.1f°C\n", sensorData.temperature);
+        M5.Display.printf("Temp:%.1f C\n", sensorData.temperature);
       }
+      
+      // 湿度
       if (sensorData.hasHumidity) {
-        M5.Display.printf("Humidity: %.1f%%\n", sensorData.humidity);
+        M5.Display.printf("Hum:%.1f%%\n", sensorData.humidity);
+      }
+      
+      // GPS
+      if (sensorData.hasGps) {
+        M5.Display.printf("Lat:%.6f\n", sensorData.latitude);
+        M5.Display.printf("Lon:%.6f\n", sensorData.longitude);
+        if (sensorData.altitude != 0) {
+          M5.Display.printf("Alt:%.1fm Spd:%.1fm/s\n", sensorData.altitude, sensorData.speed);
+        }
       }
       
       M5.Display.println();

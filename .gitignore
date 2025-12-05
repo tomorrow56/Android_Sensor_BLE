@@ -1,5 +1,5 @@
 # Built application files
-*.apk
+# *.apk  # APKファイルはリリース用に保持
 *.aar
 *.ap_
 *.aab
