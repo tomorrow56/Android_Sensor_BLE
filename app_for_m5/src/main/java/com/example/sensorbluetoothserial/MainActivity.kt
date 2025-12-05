@@ -424,6 +424,8 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         // WakeLockを確実に解放
         releaseWakeLock()
+        // サービスを停止してBLEアドバタイジングを終了
+        stopService(Intent(this, BlePeripheralService::class.java))
     }
     
     companion object {

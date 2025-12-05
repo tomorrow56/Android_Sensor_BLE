@@ -317,10 +317,18 @@ class MyScanCallbacks : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* advertisedDevice) override {
     if (currentState != STATE_SCANNING) return;
     
+    // Service UUIDでフィルタリング - アプリが動作しているデバイスのみ
+    if (!advertisedDevice->isAdvertisingService(serviceUUID)) {
+      return;
+    }
+    
     String name = advertisedDevice->getName().c_str();
     String address = advertisedDevice->getAddress().toString().c_str();
     
-    if (name.length() == 0) return;
+    // 名前がなくてもService UUIDが一致すれば追加
+    if (name.length() == 0) {
+      name = "Unknown";
+    }
     
     for (const auto& dev : deviceList) {
       if (dev.address == address) return;
@@ -338,6 +346,8 @@ class MyScanCallbacks : public NimBLEScanCallbacks {
     Serial.print(name);
     Serial.print(" (");
     Serial.print(address);
+    Serial.print(", type: ");
+    Serial.print(info.addressType);
     Serial.print(", RSSI: ");
     Serial.print(info.rssi);
     Serial.println(")");
@@ -351,22 +361,34 @@ class MyScanCallbacks : public NimBLEScanCallbacks {
 
 // BLEサーバーに接続
 bool connectToServer(String address, uint8_t addressType) {
-  Serial.println("Connecting to device...");
-  currentState = STATE_CONNECTING;
+  Serial.print("Connecting to ");
+  Serial.print(address);
+  Serial.print(" (type: ");
+  Serial.print(addressType);
+  Serial.println(")");
   
-  if (pClient == nullptr) {
-    pClient = NimBLEDevice::createClient();
-    pClient->setClientCallbacks(new MyClientCallback());
-    pClient->setConnectionParams(12, 12, 0, 51);
-    pClient->setConnectTimeout(10);
+  currentState = STATE_CONNECTING;
+  updateDisplay();
+  
+  // 既存のクライアントを削除して新規作成
+  if (pClient != nullptr) {
+    NimBLEDevice::deleteClient(pClient);
+    pClient = nullptr;
   }
   
+  pClient = NimBLEDevice::createClient();
+  Serial.println(" - Created client");
+  
+  pClient->setClientCallbacks(new MyClientCallback());
+  
+  // アドレスからBLEAddressオブジェクトを作成（スキャン時のアドレスタイプを使用）
   NimBLEAddress bleAddress(address.c_str(), addressType);
   Serial.print(" - BLE Address: ");
   Serial.print(bleAddress.toString().c_str());
   Serial.print(", type: ");
   Serial.println(addressType);
   
+  // デバイスに接続
   Serial.println(" - Attempting to connect...");
   updateDisplay();
   
