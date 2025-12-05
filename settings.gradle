@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SensorBluetoothSerial"
 include ':app'
+include ':app_for_m5'
