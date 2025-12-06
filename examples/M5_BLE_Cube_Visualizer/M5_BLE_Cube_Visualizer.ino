@@ -83,7 +83,7 @@ float currentYaw = 0.0f;
 
 // 画面更新用タイマー
 unsigned long lastDisplayUpdate = 0;
-const unsigned long DISPLAY_UPDATE_INTERVAL = 200; // 200ms = 5Hz
+const unsigned long DISPLAY_UPDATE_INTERVAL = 20; // 20ms = 50Hz
 
 // スキャンコールバック用の永続的なオブジェクト
 class MyScanCallbacks;
@@ -461,8 +461,8 @@ void startScan() {
   pBLEScan->setActiveScan(true);
   pBLEScan->setMaxResults(0);
   
-  Serial.println("Starting 10 second scan...");
-  pBLEScan->start(10000, false, true);
+  Serial.println("Starting 3 second scan...");
+  pBLEScan->start(3000, false, true);
   Serial.println("Scan started, waiting for callbacks...");
 }
 
@@ -553,25 +553,27 @@ void drawWireframeCube() {
   }
   
   // 12本のエッジを描画
-  uint16_t color = GREEN;
+  uint16_t colorF = CYAN;
+  uint16_t colorR = GREEN;
+  uint16_t colorC = RED;
   
   // 後面の4本
-  M5.Display.drawLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y, color);
-  M5.Display.drawLine(projected[1].x, projected[1].y, projected[2].x, projected[2].y, color);
-  M5.Display.drawLine(projected[2].x, projected[2].y, projected[3].x, projected[3].y, color);
-  M5.Display.drawLine(projected[3].x, projected[3].y, projected[0].x, projected[0].y, color);
+  M5.Display.drawLine(projected[0].x, projected[0].y, projected[1].x, projected[1].y, colorR);
+  M5.Display.drawLine(projected[1].x, projected[1].y, projected[2].x, projected[2].y, colorR);
+  M5.Display.drawLine(projected[2].x, projected[2].y, projected[3].x, projected[3].y, colorR);
+  M5.Display.drawLine(projected[3].x, projected[3].y, projected[0].x, projected[0].y, colorR);
   
   // 前面の4本
-  M5.Display.drawLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y, color);
-  M5.Display.drawLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y, color);
-  M5.Display.drawLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y, color);
-  M5.Display.drawLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y, color);
+  M5.Display.drawLine(projected[4].x, projected[4].y, projected[5].x, projected[5].y, colorF);
+  M5.Display.drawLine(projected[5].x, projected[5].y, projected[6].x, projected[6].y, colorF);
+  M5.Display.drawLine(projected[6].x, projected[6].y, projected[7].x, projected[7].y, colorF);
+  M5.Display.drawLine(projected[7].x, projected[7].y, projected[4].x, projected[4].y, colorF);
   
   // 前後を結ぶ4本
-  M5.Display.drawLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y, color);
-  M5.Display.drawLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y, color);
-  M5.Display.drawLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y, color);
-  M5.Display.drawLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y, color);
+  M5.Display.drawLine(projected[0].x, projected[0].y, projected[4].x, projected[4].y, colorC);
+  M5.Display.drawLine(projected[1].x, projected[1].y, projected[5].x, projected[5].y, colorC);
+  M5.Display.drawLine(projected[2].x, projected[2].y, projected[6].x, projected[6].y, colorC);
+  M5.Display.drawLine(projected[3].x, projected[3].y, projected[7].x, projected[7].y, colorC);
 }
 
 // 画面表示更新
@@ -582,18 +584,24 @@ void updateDisplay() {
     case STATE_SCANNING:
       M5.Display.setCursor(0, 0);
       M5.Display.setTextSize(2);
+      M5.Display.setTextColor(WHITE);
       M5.Display.println("Scanning...");
-      M5.Display.setTextSize(1);
+      M5.Display.setTextSize(2);
+      M5.Display.setTextColor(GREEN);
       M5.Display.println("Searching for devices");
       break;
       
     case STATE_DEVICE_LIST:
       M5.Display.setCursor(0, 0);
       M5.Display.setTextSize(2);
+      M5.Display.setTextColor(WHITE);
       M5.Display.println("Select Device");
-      M5.Display.setTextSize(1);
+      M5.Display.println();
+      M5.Display.setTextSize(2);
+      M5.Display.setTextColor(CYAN);
       
       if (deviceList.size() == 0) {
+      M5.Display.setTextColor(RED);
         M5.Display.println("No devices found");
         M5.Display.println("BtnB: Rescan");
       } else {
@@ -609,6 +617,7 @@ void updateDisplay() {
           M5.Display.println(")");
         }
         
+        M5.Display.setTextColor(WHITE);
         M5.Display.println();
         M5.Display.println("BtnA: Up  BtnB: Connect");
         M5.Display.println("BtnC: Down");
@@ -618,8 +627,10 @@ void updateDisplay() {
     case STATE_CONNECTING:
       M5.Display.setCursor(0, 0);
       M5.Display.setTextSize(2);
+      M5.Display.setTextColor(WHITE);
       M5.Display.println("Connecting...");
-      M5.Display.setTextSize(1);
+      M5.Display.setTextSize(2);
+      M5.Display.setTextColor(MAGENTA);
       M5.Display.println("Please wait");
       break;
       
@@ -628,8 +639,9 @@ void updateDisplay() {
       drawWireframeCube();
       
       // センサーデータを画面下部に表示
-      M5.Display.setTextSize(1);
-      M5.Display.setCursor(0, M5.Display.height() - 40);
+      M5.Display.setTextSize(2);
+      M5.Display.setTextColor(WHITE);
+      M5.Display.setCursor(0, M5.Display.height() - 50);
       
       if (sensorData.hasAccel) {
         M5.Display.printf("Acc:%.1f,%.1f,%.1f\n", 
@@ -647,6 +659,7 @@ void updateDisplay() {
     case STATE_ERROR:
       M5.Display.setCursor(0, 0);
       M5.Display.setTextSize(2);
+      M5.Display.setTextColor(RED);
       M5.Display.println("Error");
       M5.Display.setTextSize(1);
       M5.Display.println(lastError);
@@ -739,7 +752,7 @@ void loop() {
   if (currentState == STATE_CONNECTED && connected) {
     updateRotationFromSensor();
     
-    // 画面更新 (5Hz = 200ms間隔)
+    // 画面更新
     unsigned long now = millis();
     if (now - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL) {
       updateDisplay();
