@@ -76,7 +76,11 @@ Androidスマートフォンの内部センサーの値を **Bluetooth Low Energ
 2.  スクリプトを実行します。
 
     ```bash
+    # 通常版（appフォルダのAndroidアプリ用）
     python3 receive_ble_sensor_data.py
+
+    # M5Stack対応版（app_for_m5のAndroidアプリ用）
+    python3 receive_ble_sensor_data_m5.py
     ```
 
 スクリプトは以下の処理を行います:
@@ -84,6 +88,8 @@ Androidスマートフォンの内部センサーの値を **Bluetooth Low Energ
 - センサーデータ (JSON) のリアルタイム受信
 - コンソールへのリアルタイム表示
 - CSVファイルへの自動保存
+
+**注意**: `receive_ble_sensor_data_m5.py`は分割送信されたデータの再構築に対応しています。
 
 ## データフォーマット
 
@@ -156,6 +162,7 @@ Androidスマートフォンの内部センサーの値を **Bluetooth Low Energ
 
 IMUセンサーデータを3Dキューブで可視化するインタラクティブなWebアプリケーションです。
 
+- **デプロイURL**: https://android-sensor-ble.vercel.app/
 - **場所**: `WebUI_Cube/`
 - **機能**: 3Dキューブのリアルタイム姿勢表示、インタラクティブな視点操作
 - **技術**: Three.js、Web Bluetooth API
@@ -163,21 +170,61 @@ IMUセンサーデータを3Dキューブで可視化するインタラクティ
 
 両方のデモアプリケーションは、Web Bluetooth APIを使用してブラウザから直接Androidデバイスに接続できます。Chrome、Edge、Operaなどのブラウザでご利用いただけます。
 
+## M5Stack対応
+
+このプロジェクトには、M5Stackでセンサーデータを受信するためのサンプルスケッチと専用Androidアプリが含まれています。
+
+### app_for_m5 - M5Stack対応 Androidアプリ
+
+M5Stackとの通信に最適化されたAndroidセンサーデータ送信アプリです。
+
+- **場所**: `app_for_m5/`
+- **APK**: `app_for_m5/app_for_m5-debug.apk`
+- **特徴**: MTU対応のデータ分割送信、終端マーカー対応
+- **詳細**: [app_for_m5/README.md](app_for_m5/README.md)
+
+### M5_BLE_Rcv_Test_Complete - テキスト表示版
+
+センサーデータをテキストで表示するM5Stack用スケッチです。
+
+- **場所**: `examples/M5_BLE_Rcv_Test_Complete/`
+- **機能**: BLEデバイススキャン、デバイス選択、JSONデータ受信・表示
+- **必要ライブラリ**: M5Unified, NimBLE-Arduino, ArduinoJson
+
+### M5_BLE_Cube_Visualizer - 3Dキューブ可視化版
+
+センサーデータを3Dワイヤーフレームキューブで可視化するM5Stack用スケッチです。
+
+- **場所**: `examples/M5_BLE_Cube_Visualizer/`
+- **機能**: 3Dキューブのリアルタイム姿勢表示、スムーズなアニメーション
+- **必要ライブラリ**: M5Unified, NimBLE-Arduino, ArduinoJson
+- **詳細**: [examples/M5_BLE_Cube_Visualizer/README.md](examples/M5_BLE_Cube_Visualizer/README.md)
+
 ## プロジェクト構造
 
 ```
-Android_Sensor_BLE_Serial/
-├── app/
+Android_Sensor_BLE/
+├── app/                                        # 通常版Androidアプリ
 │   ├── src/
 │   │   └── main/
 │   │       ├── java/com/example/sensorbluetoothserial/
 │   │       │   ├── MainActivity.kt           # メインアクティビティ
-│   │       │   ├── BlePeripheralService.kt     # BLEペリフェラルサービス (データ収集・BLE送信)
+│   │       │   ├── BlePeripheralService.kt   # BLEペリフェラルサービス
 │   │       │   ├── SensorDataManager.kt      # センサー管理
 │   │       │   └── SensorData.kt             # データモデル
 │   │       ├── res/
 │   │       └── AndroidManifest.xml
 │   └── build.gradle
+├── app_for_m5/                                 # M5Stack対応版Androidアプリ
+│   ├── src/
+│   ├── app_for_m5-debug.apk
+│   └── README.md
+├── examples/                                   # M5Stack用サンプルスケッチ
+│   ├── M5_BLE_Rcv_Test_Complete/               # テキスト表示版
+│   │   └── M5_BLE_Rcv_Test_Complete.ino
+│   └── M5_BLE_Cube_Visualizer/                 # 3Dキューブ可視化版
+│       ├── M5_BLE_Cube_Visualizer.ino
+│       └── README.md
 ├── WebUI/                                      # Webデータ表示デモ
 │   ├── index.html
 │   ├── app.js
@@ -186,7 +233,8 @@ Android_Sensor_BLE_Serial/
 │   ├── index.html
 │   ├── app.js
 │   └── README.md
-├── receive_ble_sensor_data.py                 # PC側BLEデータ受信スクリプト
+├── receive_ble_sensor_data.py                  # PC側BLEデータ受信スクリプト
+├── receive_ble_sensor_data_m5.py               # PC側BLEデータ受信スクリプト (M5対応版)
 └── README.md
 ```
 

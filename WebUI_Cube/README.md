@@ -2,6 +2,8 @@
 
 Web Bluetooth APIを使用してAndroidアプリのIMUセンサーデータを受信し、3Dキューブで可視化するWebアプリケーションです。
 
+**デプロイURL**: https://android-sensor-ble.vercel.app/
+
 ## 概要
 
 このアプリケーションは、AndroidスマートフォンがBluetooth Low Energy (BLE) 経由で送信するIMUセンサーデータをWebブラウザで直接受信し、リアルタイムで3Dキューブの姿勢として表示します。
