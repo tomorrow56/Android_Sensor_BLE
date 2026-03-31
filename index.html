@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sensor Sonification — Android BLE</title>
+  <style>
+    /* ─────────────────────────────────────────
+       Base & Reset
+    ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0b0f;
+      --surface:   #13131a;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #d8d8e8;
+      --muted:     #55556a;
+      --accent:    #7c6af7;
+      --accent2:   #4fc3f7;
+      --accent3:   #f06292;
+      --accent4:   #66bb6a;
+      --accent5:   #ffa726;
+      --accent6:   #ab47bc;
+      --accent7:   #26c6da;
+      --radius:    14px;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ─────────────────────────────────────────
+       Layout
+    ───────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+      padding: 18px;
+      gap: 16px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    /* ─────────────────────────────────────────
+       Header
+    ───────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .header-left h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-left p {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Status pill */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border: 1px solid currentColor;
+      transition: all 0.3s;
+    }
+    .pill.disconnected { color: #ef5350; background: rgba(239,83,80,0.1); }
+    .pill.connected    { color: #66bb6a; background: rgba(102,187,106,0.1); }
+    .pill.receiving    { color: var(--accent2); background: rgba(79,195,247,0.1); animation: pulse-pill 1.5s ease-in-out infinite; }
+
+    @keyframes pulse-pill {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.6; }
+    }
+
+    .pill-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-connect  { background: linear-gradient(135deg, var(--accent), #5a4fcf); color: #fff; }
+    .btn-connect:hover:not(:disabled)  { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn-start    { background: rgba(79,195,247,0.15); color: var(--accent2); border-color: rgba(79,195,247,0.4); }
+    .btn-start:hover:not(:disabled)    { background: rgba(79,195,247,0.25); }
+    .btn-stop     { background: rgba(240,98,146,0.15); color: var(--accent3); border-color: rgba(240,98,146,0.4); }
+    .btn-stop:hover:not(:disabled)     { background: rgba(240,98,146,0.25); }
+    .btn-disc     { background: rgba(255,255,255,0.06); color: var(--muted); border-color: var(--border); }
+    .btn-disc:hover:not(:disabled)     { background: rgba(255,255,255,0.1); color: var(--text); }
+    .btn-sound    { background: rgba(171,71,188,0.15); color: var(--accent6); border-color: rgba(171,71,188,0.4); }
+    .btn-sound:hover:not(:disabled)    { background: rgba(171,71,188,0.25); }
+
+    /* ─────────────────────────────────────────
+       Main canvas area
+    ───────────────────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .main { grid-template-columns: 1fr; }
+    }
+
+    /* Waveform panel */
+    .waveform-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .wave-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wave-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .wave-card-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .wave-card-values {
+      display: flex;
+      gap: 14px;
+    }
+
+    .wave-val {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .wave-val span { font-size: 0.65rem; color: var(--muted); margin-right: 3px; }
+
+    canvas.wave {
+      width: 100%;
+      height: 80px;
+      display: block;
+      border-radius: 6px;
+    }
+
+    /* Glow line under card */
+    .wave-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 2px;
+      border-radius: 0 0 var(--radius) var(--radius);
+      opacity: 0.6;
+    }
+
+    /* ─────────────────────────────────────────
+       Side panel
+    ───────────────────────────────────────── */
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .info-card h3 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* Radial meter */
+    .radial-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    canvas#radialCanvas {
+      width: 100%;
+      max-width: 240px;
+    }
+
+    /* Scalar gauges */
+    .gauge-row {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .gauge-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .gauge-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .gauge-label strong {
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+
+    .gauge-track {
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.15s ease;
+    }
+
+    /* Sound viz */
+    canvas#specCanvas {
+      width: 100%;
+      height: 70px;
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* Frequency labels */
+    .freq-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ─────────────────────────────────────────
+       Footer / stats
+    ───────────────────────────────────────── */
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .stat { display: flex; gap: 6px; align-items: center; }
+    .stat strong { color: var(--text); font-family: var(--font-mono); }
+
+    /* ─────────────────────────────────────────
+       Idle overlay
+    ───────────────────────────────────────── */
+    #idleOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(11,11,15,0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      z-index: 100;
+      transition: opacity 0.5s;
+    }
+
+    #idleOverlay.hidden { opacity: 0; pointer-events: none; }
+
+    .idle-icon {
+      font-size: 3.5rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
+    .idle-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .idle-sub {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: center;
+      max-width: 360px;
+      line-height: 1.6;
+    }
+
+    .idle-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text);
+    }
+
+    .idle-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-num {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+
+    /* ─────────────────────────────────────────
+       Demo mode banner
+    ───────────────────────────────────────── */
+    #demoBanner {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(124,106,247,0.15);
+      border: 1px solid rgba(124,106,247,0.4);
+      color: var(--accent);
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      animation: pulse-pill 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Idle overlay -->
+<div id="idleOverlay">
+  <div class="idle-icon">〰️</div>
+  <div class="idle-title">Sensor Sonification</div>
+  <div class="idle-sub">
+    Androidスマートフォンのセンサーデータを<br>
+    波形と音でリアルタイムに可視化します
+  </div>
+  <div class="idle-steps">
+    <div class="idle-step"><div class="step-num">1</div>「デバイスに接続」でBLE接続</div>
+    <div class="idle-step"><div class="step-num">2</div>「データ受信開始」でストリーム開始</div>
+    <div class="idle-step"><div class="step-num">3</div>「サウンドON」で音響フィードバック有効化</div>
+  </div>
+  <button class="btn btn-connect" id="overlayConnectBtn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>
+    デバイスに接続
+  </button>
+  <button class="btn btn-disc" id="overlayDemoBtn" style="font-size:0.78rem;">
+    ▶ デモモードで試す（BLEなし）
+  </button>
+</div>
+
+<div id="demoBanner">🎲 デモモード — 仮想センサーデータを使用中</div>
+
+<!-- App shell -->
+<div class="app">
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <h1>〰 Sensor Sonification</h1>
+      <p>Android BLE センサーデータ — 波形 &amp; 音響ビジュアライザー</p>
+    </div>
+    <div class="header-controls">
+      <span class="pill disconnected" id="statusPill">
+        <span class="pill-dot"></span>
+        <span id="statusText">未接続</span>
+      </span>
+      <button class="btn btn-connect" id="connectBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a13 13 0 0 0 0 17M20.5 3.5a13 13 0 0 1 0 17"/></svg>
+        接続
+      </button>
+      <button class="btn btn-start" id="startBtn" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        受信開始
+      </button>
+      <button class="btn btn-stop" id="stopBtn" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+        受信停止
+      </button>
+      <button class="btn btn-disc" id="disconnectBtn" disabled>切断</button>
+      <button class="btn btn-sound" id="soundBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        サウンドON
+      </button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Waveform panel -->
+    <div class="waveform-panel">
+
+      <!-- Accelerometer -->
+      <div class="wave-card" style="--glow:#7c6af7;">
+        <div class="wave-card-header">
+          <span class="wave-card-title" style="color:var(--accent);">加速度センサー — m/s²</span>
+          <div class="wave-card-values">
+            <div class="wave-val" style="color:var(--accent);">
+              <span>X</span><span id="aX">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent2);">
+              <span>Y</span><span id="aY">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent3);">
+              <span>Z</span><span id="aZ">—</span>
+            </div>
+          </div>
+        </div>
+        <canvas class="wave" id="waveAccel"></canvas>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:0 0 var(--radius) var(--radius);opacity:0.5;"></div>
+      </div>
+
+      <!-- Gyroscope -->
+      <div class="wave-card">
+        <div class="wave-card-header">
+          <span class="wave-card-title" style="color:var(--accent2);">ジャイロスコープ — rad/s</span>
+          <div class="wave-card-values">
+            <div class="wave-val" style="color:var(--accent);">
+              <span>X</span><span id="gX">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent2);">
+              <span>Y</span><span id="gY">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent3);">
+              <span>Z</span><span id="gZ">—</span>
+            </div>
+          </div>
+        </div>
+        <canvas class="wave" id="waveGyro"></canvas>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent6));border-radius:0 0 var(--radius) var(--radius);opacity:0.5;"></div>
+      </div>
+
+      <!-- Magnetometer -->
+      <div class="wave-card">
+        <div class="wave-card-header">
+          <span class="wave-card-title" style="color:var(--accent5);">磁気センサー — μT</span>
+          <div class="wave-card-values">
+            <div class="wave-val" style="color:var(--accent);">
+              <span>X</span><span id="mX">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent2);">
+              <span>Y</span><span id="mY">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent3);">
+              <span>Z</span><span id="mZ">—</span>
+            </div>
+          </div>
+        </div>
+        <canvas class="wave" id="waveMag"></canvas>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent5),var(--accent3));border-radius:0 0 var(--radius) var(--radius);opacity:0.5;"></div>
+      </div>
+
+      <!-- Gravity -->
+      <div class="wave-card">
+        <div class="wave-card-header">
+          <span class="wave-card-title" style="color:var(--accent4);">重力センサー — m/s²</span>
+          <div class="wave-card-values">
+            <div class="wave-val" style="color:var(--accent);">
+              <span>X</span><span id="grX">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent2);">
+              <span>Y</span><span id="grY">—</span>
+            </div>
+            <div class="wave-val" style="color:var(--accent3);">
+              <span>Z</span><span id="grZ">—</span>
+            </div>
+          </div>
+        </div>
+        <canvas class="wave" id="waveGrav"></canvas>
+        <div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent4),var(--accent7));border-radius:0 0 var(--radius) var(--radius);opacity:0.5;"></div>
+      </div>
+
+    </div><!-- /waveform-panel -->
+
+    <!-- Side panel -->
+    <div class="side-panel">
+
+      <!-- Radial IMU -->
+      <div class="info-card">
+        <h3>IMU ベクトル強度</h3>
+        <div class="radial-wrap">
+          <canvas id="radialCanvas" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Scalar gauges -->
+      <div class="info-card">
+        <h3>スカラーセンサー</h3>
+        <div class="gauge-row">
+
+          <div class="gauge-item">
+            <div class="gauge-label">
+              <span>光センサー</span>
+              <strong id="luxVal">— lux</strong>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="luxBar" style="width:0%;background:linear-gradient(90deg,#ffd54f,#ff8f00);"></div>
+            </div>
+          </div>
+
+          <div class="gauge-item">
+            <div class="gauge-label">
+              <span>近接センサー</span>
+              <strong id="proxVal">— cm</strong>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="proxBar" style="width:0%;background:linear-gradient(90deg,#80cbc4,#00897b);"></div>
+            </div>
+          </div>
+
+          <div class="gauge-item">
+            <div class="gauge-label">
+              <span>GPS 速度</span>
+              <strong id="speedVal">— m/s</strong>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="speedBar" style="width:0%;background:linear-gradient(90deg,#ce93d8,#8e24aa);"></div>
+            </div>
+          </div>
+
+          <div class="gauge-item">
+            <div class="gauge-label">
+              <span>GPS 高度</span>
+              <strong id="altVal">— m</strong>
+            </div>
+            <div class="gauge-track">
+              <div class="gauge-fill" id="altBar" style="width:0%;background:linear-gradient(90deg,#90caf9,#1565c0);"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Sound spectrum -->
+      <div class="info-card">
+        <h3>音響スペクトラム</h3>
+        <canvas id="specCanvas" height="70"></canvas>
+        <div class="freq-labels">
+          <span>低音 (加速度)</span>
+          <span>高音 (ジャイロ)</span>
+        </div>
+        <div style="margin-top:10px;font-size:0.72rem;color:var(--muted);line-height:1.6;">
+          光センサー → ピッチ<br>
+          加速度強度 → 音量<br>
+          ジャイロ → フィルター
+        </div>
+      </div>
+
+    </div><!-- /side-panel -->
+
+  </div><!-- /main -->
+
+  <!-- Footer -->
+  <footer>
+    <div class="stat">パケット受信数 <strong id="pktCount">0</strong></div>
+    <div class="stat">最終受信 <strong id="lastTime">—</strong></div>
+    <div class="stat">サンプリング <strong id="sampleRate">— Hz</strong></div>
+    <div class="stat">デバイス <strong id="deviceName">—</strong></div>
+    <div style="color:var(--muted);">Web Bluetooth API + Canvas + Web Audio API</div>
+  </footer>
+
+</div><!-- /app -->
+
+<script src="app.js"></script>
+</body>
+</html>
