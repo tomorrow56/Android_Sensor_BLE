@@ -1,4 +1,5 @@
 {
+  "outputDirectory": ".",
   "rewrites": [
     { "source": "/sonification",   "destination": "/WebUI_Sonification/index.html" },
     { "source": "/sonification/",  "destination": "/WebUI_Sonification/index.html" },
