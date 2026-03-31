@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/sonification",   "destination": "/WebUI_Sonification/index.html" },
+    { "source": "/sonification/",  "destination": "/WebUI_Sonification/index.html" },
+    { "source": "/cube",           "destination": "/WebUI_Cube/index.html" },
+    { "source": "/cube/",          "destination": "/WebUI_Cube/index.html" },
+    { "source": "/",               "destination": "/WebUI_Cube/index.html" }
+  ]
+}
