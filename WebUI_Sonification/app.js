@@ -543,8 +543,10 @@ async function connectBLE() {
     document.getElementById('deviceName').textContent = bleDevice.name || 'Unknown';
     updateUI();
     hideOverlay();
+    console.log('BLE connected. Characteristic:', bleChar);
+    console.log('Properties:', bleChar.properties);
   } catch (e) {
-    console.error(e);
+    console.error('connectBLE error:', e);
     if (e.name !== 'NotFoundError') alert('接続エラー: ' + e.message);
   }
 }
@@ -564,11 +566,22 @@ function onBLEDisconnect() {
 }
 
 async function startReceiving() {
-  if (!bleChar) return;
-  bleChar.addEventListener('characteristicvaluechanged', onBLEData);
-  await bleChar.startNotifications();
-  isReceiving = true;
-  updateUI();
+  if (!bleChar) {
+    alert('デバイスが接続されていません');
+    return;
+  }
+  try {
+    console.log('startReceiving: bleChar =', bleChar);
+    console.log('startReceiving: properties =', bleChar.properties);
+    bleChar.addEventListener('characteristicvaluechanged', onBLEData);
+    await bleChar.startNotifications();
+    isReceiving = true;
+    updateUI();
+    console.log('Notifications started successfully');
+  } catch (e) {
+    console.error('startReceiving error:', e);
+    alert('データ受信の開始に失敗しました: ' + e.message);
+  }
 }
 
 async function stopReceiving() {
@@ -576,18 +589,46 @@ async function stopReceiving() {
   try {
     await bleChar.stopNotifications();
     bleChar.removeEventListener('characteristicvaluechanged', onBLEData);
-  } catch(_) {}
+  } catch(e) {
+    console.warn('stopReceiving error:', e);
+  }
   isReceiving = false;
   updateUI();
 }
 
+// BLE packet buffer for fragmented JSON
+let bleBuffer = '';
+
 function onBLEData(event) {
   try {
-    const raw  = new TextDecoder('utf-8').decode(event.target.value);
-    const data = JSON.parse(raw);
-    ingestData(data);
+    const chunk = new TextDecoder('utf-8').decode(event.target.value);
+    bleBuffer += chunk;
+
+    // Try to parse accumulated buffer
+    // Look for complete JSON object
+    const start = bleBuffer.indexOf('{');
+    const end   = bleBuffer.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      const jsonStr = bleBuffer.slice(start, end + 1);
+      try {
+        const data = JSON.parse(jsonStr);
+        bleBuffer = bleBuffer.slice(end + 1); // keep remainder
+        ingestData(data);
+      } catch(e) {
+        // Incomplete JSON — keep buffering
+        // But if buffer gets too large, reset it
+        if (bleBuffer.length > 4096) {
+          console.warn('BLE buffer overflow, resetting');
+          bleBuffer = '';
+        }
+      }
+    } else if (bleBuffer.length > 4096) {
+      console.warn('BLE buffer overflow (no JSON found), resetting');
+      bleBuffer = '';
+    }
   } catch(e) {
-    console.warn('Parse error:', e);
+    console.warn('onBLEData error:', e);
+    bleBuffer = '';
   }
 }
 
