@@ -4,7 +4,7 @@ Web Bluetooth API + Canvas 2D + Web Audio API を使用して、Android BLE セ�
 
 ## デプロイURL
 
-> https://android-sensor-ble.vercel.app/sonification/
+> [https://android-sensor-ble.vercel.app/sonification/](https://web-ui-sonification-i85vafbyv-tomorrow56s-projects.vercel.app/)
 
 ## 主な機能
 
