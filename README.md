@@ -1,4 +1,4 @@
-# Android Sensor BLE Serial
+# Android Sensor BLE
 
 Androidスマートフォンの内部センサーの値を **Bluetooth Low Energy (BLE)** でPCへ出力するアプリケーションです。
 
